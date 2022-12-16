@@ -26,6 +26,17 @@ internal class OtusDictionaryWithoutBuckets
     private (int key, string value)[] _body;
     private bool _isDemoModeOn;
     
+    uint hash(int key)
+    {
+        int c2 = 0x27d4eb2d;
+        key = (key ^ 61) ^ (key >> 16);
+        key = key + (key << 3);
+        key = key ^ (key >> 4);
+        key = key * c2;
+        key = key ^ (key >> 15);
+        return (uint)key;
+    }
+    
     public OtusDictionaryWithoutBuckets(bool isDemoModeOn = false)
     {
         _isDemoModeOn = isDemoModeOn;
@@ -45,16 +56,20 @@ internal class OtusDictionaryWithoutBuckets
 
     public void Add(int key, string value)
     {
-        
-        if (_body[key % _body.Length].value == null)
+
+        if (_body[hash(key) % _body.Length].value == null)
         {
-            _body[key % _body.Length] = (key, value);
+            _body[hash(key) % _body.Length] = (key, value);
+        }
+        else if (_body[hash(key) % _body.Length].key == key)
+        {
+            throw new Exception($"В словаре уже есть элемент с ключом {key}, для его замены используйте индексатор dict[key]=value");
         }
         else
-        {
+        { 
             if (_isDemoModeOn)
             {
-                throw new Exception($"Демо режим работы OtusDictionary не позволяет добавить ({key}, {value})");
+                throw new Exception($"При добавлении элемента ({key}, {value}) произошла коллизия. Демо режим работы OtusDictionary не позволяет расширить словарь.");
             }
             else
             {
@@ -66,14 +81,14 @@ internal class OtusDictionaryWithoutBuckets
                     Console.WriteLine($"Произошла коллизия, база словаря увеличена, новый размер {_bodyTmp.Length}");
                     
                     bool hasNotCollison = true;
-                    _bodyTmp[key % _bodyTmp.Length] = (key, value);
+                    _bodyTmp[hash(key) % _bodyTmp.Length] = (key, value);
                     foreach (var element in _body)
                     {
                         if (element.value == null) continue;
                         
-                        if (_bodyTmp[element.key % _bodyTmp.Length].value == null)
+                        if (_bodyTmp[hash(element.key) % _bodyTmp.Length].value == null)
                         {
-                            _bodyTmp[element.key % _bodyTmp.Length] = element;
+                            _bodyTmp[hash(element.key) % _bodyTmp.Length] = element;
                         }
                         else
                         {
@@ -94,18 +109,18 @@ internal class OtusDictionaryWithoutBuckets
 
     public string? Get(int key)
     {
-        return _body[key % _body.Length].value;
+        return _body[hash(key) % _body.Length].value;
     }
 
     public string this [int key]
     {
         get
         {            
-            if (_body[key % _body.Length].value == null)
+            if (_body[hash(key) % _body.Length].value == null)
             {
                 throw new KeyNotFoundException($"Ключ {key} не найден в словаре");
             }
-            return _body[key % _body.Length].value;
+            return _body[hash(key) % _body.Length].value;
         }
         set
         {
@@ -113,10 +128,10 @@ internal class OtusDictionaryWithoutBuckets
             {
                 throw new ArgumentNullException("Значение не может быть null");
             }
-            var element = _body[key % _body.Length];
+            var element = _body[hash(key) % _body.Length];
             if (element.value == null || element.key == key)
             {
-                _body[key % _body.Length] = (key, value);
+                _body[hash(key) % _body.Length] = (key, value);
             }
             else
             {
